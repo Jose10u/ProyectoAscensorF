@@ -1,0 +1,37 @@
+library IEEE;
+use IEEE.STD_LOGIC_1164.ALL;
+use IEEE.STD_LOGIC_ARITH.ALL;
+use IEEE.STD_LOGIC_UNSIGNED.ALL;
+
+entity divisor2hz is
+    Port (
+        clk_50MHz : in  STD_LOGIC;  -- Reloj de entrada de 50 MHz
+        reset     : in  STD_LOGIC;  -- Señal de reset
+        clk_2Hz   : out STD_LOGIC   -- Salida de reloj de 2 Hz
+    );
+end divisor2hz;
+
+architecture Behavioral of divisor2hz is
+    signal counter : INTEGER range 0 to 25000000 := 0; -- Reducimos el contador a la mitad
+    signal clk_reg : STD_LOGIC := '0'; -- Registro para la salida de reloj
+
+begin
+    -- Proceso para dividir la frecuencia de 50 MHz a 2 Hz
+    process(clk_50MHz, reset)
+    begin
+        if reset = '1' then
+            counter <= 0;
+            clk_reg <= '0';
+        elsif rising_edge(clk_50MHz) then
+            if counter = 24999999 then  -- La mitad del valor anterior
+                counter <= 0;
+                clk_reg <= not clk_reg; -- Alterna la señal para obtener 2 Hz
+            else
+                counter <= counter + 1;
+            end if;
+        end if;
+    end process;
+
+    clk_2Hz <= clk_reg; -- Asignar la señal de salida de 2 Hz
+
+end Behavioral;
