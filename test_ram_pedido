@@ -1,0 +1,159 @@
+library IEEE;
+use IEEE.std_logic_1164.all;
+
+entity test_ram_pedido is
+
+	port
+	(
+		-- Input ports
+		reset	: in  std_logic;
+		clk : in std_logic;
+		piso_seleccionado, piso_seleccionado_panel : in std_logic_vector(4 downto 0);
+		sensor_piso : in std_logic;
+		
+		sw_vel : in std_logic;
+		
+		--entradas maquina de estado
+		peso : in std_logic;
+		fallo : in std_logic;
+		
+		-- salidas maquina de estado
+		puerta_salida : out std_logic;
+		
+		-- Output ports
+		motore : out std_logic_vector(1 downto 0);
+		piso_salida : out std_logic_vector(6 downto 0)
+	);
+end test_ram_pedido;
+
+
+architecture arch_name of test_ram_pedido is
+	
+	component ascensor is
+    Port (
+        clk          : in  STD_LOGIC;
+		  reset 			: in std_logic;
+        up		 		: in std_logic;
+		  down		 		: in std_logic;
+        peso     : in  STD_LOGIC;
+        fallo_electrico   : in  STD_LOGIC;
+		  
+        puerta    : out STD_LOGIC;
+        motor        : out STD_LOGIC_VECTOR(1 downto 0)
+		  );
+	end component;
+
+
+	component recibir_llamado is
+	port
+	(
+		-- Input ports
+		clk : in std_logic;
+		reset : in std_logic;
+		piso_seleccionado	: in  std_logic_vector(4 downto 0);
+		piso_seleccionado_panel : in std_logic_vector(4 downto 0);
+		
+		-- Output ports
+		direccion	: out std_logic_vector(3 downto 0);
+		piso_salida : out std_logic_vector(4 downto 0);
+		e_l : out std_logic
+	);
+	end component;
+	
+	component ram_piso is
+
+	port
+	(
+		-- Input ports
+		address	: in  std_logic_vector (3 downto 0);
+		dato	: in  std_logic_vector(4 downto 0);
+		we : in std_logic;
+		data_out : out std_logic_vector(4 downto 0)
+	);
+	end component;
+	
+	component div_frecuencia is
+    Port (
+        clk_50MHz : in  STD_LOGIC;  -- Reloj de 50 MHz
+        reset     : in  STD_LOGIC;  -- Señal de reset
+        clk_3Hz   : out STD_LOGIC   -- Salida del reloj de 3 Hz
+    );
+	end component;
+	
+	component pedido_piso is
+    port
+    (
+        -- Input ports
+        clk         : in  std_logic;
+        sensor_piso : in  std_logic;
+        piso_panel  : in  std_logic_vector(4 downto 0);
+        
+
+        -- Output ports
+        piso : out std_logic_vector(3 downto 0);
+        up   : out std_logic;
+        down : out std_logic
+    );
+	end component;
+	
+	component deco7seg is
+	port
+	(
+		-- Input ports
+		A,B,C,D	: in  std_logic;
+		
+		-- Output ports
+		O,P,Q,L,M,N,T	: out std_logic
+		
+	);
+	end component;
+	
+	component MOTOR_DC IS
+    PORT( 
+        CLK     : IN STD_LOGIC;                     -- Reloj del sistema
+        SW_DIR  : IN STD_LOGIC_VECTOR(1 downto 0);  -- Control de dirección: SW1 & SW0
+        SW_SPEED: IN STD_LOGIC;                     -- Control de velocidad (SW2)
+        PWM1    : OUT STD_LOGIC;                    -- Control motor terminal 1
+        PWM2    : OUT STD_LOGIC                     -- Control motor terminal 2
+    );
+	END component;
+	
+	
+	component motor_puerta is
+		generic( Max: natural := 500000);
+		Port (   
+			clk :  in  STD_LOGIC;--reloj de 50MHz
+         selector :  in  STD_LOGIC ;--selecciona las 4 posiciones
+         PWM :  out  STD_LOGIC
+				);--terminal donde sale la señal de PWM
+	end component;
+	
+	component divisor2hz is
+    Port (
+        clk_50MHz : in  STD_LOGIC;  -- Reloj de entrada de 50 MHz
+        reset     : in  STD_LOGIC;  -- Señal de reset
+        clk_2Hz   : out STD_LOGIC   -- Salida de reloj de 2 Hz
+    );
+	end component;
+
+	signal reloj, reloj_dos : std_logic;
+	signal dir : std_logic_vector(3 downto 0);
+	signal piso_sal, salida_ram : std_logic_vector(4 downto 0);
+	signal e_l : std_logic;
+	signal display_piso : std_logic_vector(3 downto 0);
+	signal arriba, abajo, s_puerta : std_logic;
+	signal motor_fsm : std_logic_vector(1 downto 0);	
+	
+begin
+
+	R : div_frecuencia port map(clk, reset, reloj);
+	rd : divisor2hz port map(clk, reset, reloj_dos);
+	PLL : recibir_llamado port map(reloj, reset, piso_seleccionado, piso_seleccionado_panel, dir, piso_sal, e_l);
+	RP : ram_piso port map(dir, piso_sal, e_l, salida_ram);
+	PP : pedido_piso port map(reloj_dos, sensor_piso, salida_ram, display_piso, arriba, abajo);
+	MEA : ascensor port map(reloj, reset, arriba, abajo, peso, fallo, s_puerta, motor_fsm);
+	display : deco7seg port map(display_piso(3), display_piso(2), display_piso(1), display_piso(0), piso_salida(6), piso_salida(5), piso_salida(4), piso_salida(3), piso_salida(2), piso_salida(1), piso_salida(0));
+	motor : MOTOR_DC port map(reloj, motor_fsm, sw_vel, motore(1), motore(0));
+	door : motor_puerta port map(clk, s_puerta, puerta_salida);
+	
+end arch_name;
