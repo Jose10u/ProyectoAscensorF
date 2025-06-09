@@ -1,0 +1,64 @@
+ibrary IEEE;
+use IEEE.STD_LOGIC_1164.ALL;
+use IEEE.STD_LOGIC_ARITH.ALL;
+use IEEE.STD_LOGIC_UNSIGNED.ALL;
+
+entity PERSONAS is
+    Port (
+        clk : in STD_LOGIC;
+        reset : in STD_LOGIC;
+        sensor : in STD_LOGIC_VECTOR(1 downto 0);
+        led_max : out STD_LOGIC
+    );
+end PERSONAS;
+
+architecture Behavioral of PERSONAS is
+    type state_type is (ESPERA, ENTRADA, SALIDA);
+    signal estado_actual, estado_siguiente : state_type;
+    signal contador : integer range 0 to 10 := 0;
+
+begin
+    -- Proceso de cambio de estado
+    process(clk, reset)
+    begin
+        if reset = '1' then
+            estado_actual <= ESPERA;
+            contador <= 0;
+        elsif rising_edge(clk) then
+            estado_actual <= estado_siguiente;
+            if estado_siguiente = ENTRADA and contador < 10 then
+                contador <= contador + 1;
+            elsif estado_siguiente = SALIDA and contador > 0 then
+                contador <= contador - 1;
+            end if;
+        end if;
+    end process;
+
+    -- Lógica de transición de estados
+    process(estado_actual, sensor)
+    begin
+        case estado_actual is
+            when ESPERA =>
+                if sensor = "10" then
+                    estado_siguiente <= ENTRADA;
+                elsif sensor = "01" then
+                    estado_siguiente <= SALIDA;
+                else
+                    estado_siguiente <= ESPERA;
+                end if;
+
+            when ENTRADA =>
+                estado_siguiente <= ESPERA;
+
+            when SALIDA =>
+                estado_siguiente <= ESPERA;
+
+            when others =>
+                estado_siguiente <= ESPERA;
+        end case;
+    end process;
+
+    -- Salida del LED de alerta
+    led_max <= '1' when contador = 10 else '0';
+
+end Behavioral;
