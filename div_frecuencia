@@ -1,0 +1,36 @@
+library IEEE;
+use IEEE.STD_LOGIC_1164.ALL;
+use IEEE.STD_LOGIC_ARITH.ALL;
+use IEEE.STD_LOGIC_UNSIGNED.ALL;
+
+entity div_frecuencia is
+    Port (
+        clk_50MHz : in  STD_LOGIC;  -- Reloj de 50 MHz
+        reset     : in  STD_LOGIC;  -- Señal de reset
+        clk_3Hz   : out STD_LOGIC   -- Salida del reloj de 3 Hz
+    );
+end div_frecuencia;
+
+architecture Behavioral of div_frecuencia is
+    signal counter : INTEGER range 0 to 16666667  := 0; -- Contador de ciclos
+    signal clk_reg : STD_LOGIC := '0'; -- Registro de la señal de salida
+
+begin
+    process(clk_50MHz, reset)
+    begin
+        if reset = '1' then
+            counter <= 0;
+            clk_reg <= '0';
+        elsif rising_edge(clk_50MHz) then
+            if counter = 16666666 then
+                counter <= 0;
+                clk_reg <= not clk_reg; -- Alterna la señal cada 50 millones de ciclos
+            else
+                counter <= counter + 1;
+            end if;
+        end if;
+    end process;
+
+    clk_3Hz <= clk_reg; -- Asignar la salida del reloj de 1 Hz
+
+end Behavioral;
