@@ -1,0 +1,91 @@
+library IEEE;
+use ieee.std_logic_1164.all;
+use ieee.numeric_std.all;  -- Para conversiones numéricas más seguras
+
+entity pedido_piso is
+    port
+    (
+        -- Input ports
+        clk         : in  std_logic;
+        sensor_piso : in  std_logic;
+        piso_panel  : in  std_logic_vector(4 downto 0);
+		  
+		 
+        -- Output ports
+        piso : out std_logic_vector(3 downto 0);
+        up   : out std_logic;
+        down : out std_logic
+    );
+end pedido_piso;
+
+architecture arch_name of pedido_piso is
+    signal senal_panel, piso_actual : integer range 0 to 4 := 0;
+    signal target_floor : integer range 0 to 4 := 0;  -- Piso destino
+begin
+
+    -- Proceso para registrar los pedidos de pisos
+    process (clk)
+    begin
+        if rising_edge(clk) then
+            -- Prioridad a los pedidos del pasillo
+           
+           
+            -- Si no hay pedidos en el pasillo, atender panel interno
+            if piso_panel /= "00000" then
+                for i in 0 to 4 loop
+                    if piso_panel(i) = '1' then
+                        senal_panel <= i;
+                    end if;
+                end loop;
+                target_floor <= senal_panel;
+            end if;
+        end if;
+    end process;
+
+    -- Proceso para controlar el movimiento del ascensor
+    process (clk)
+	 --si no funciona puerta eliminar linea 53, 54 y 65
+    begin
+        if rising_edge(clk) then
+            if sensor_piso = '1' then
+                -- Actualizar piso actual según el destino
+                if piso_actual < target_floor then
+                    piso_actual <= piso_actual + 1;
+                elsif piso_actual > target_floor then
+                    piso_actual <= piso_actual - 1;
+                end if;
+            end if;
+			end if;
+    end process;
+
+    -- Proceso para generar las señales de dirección
+    process (clk)
+    begin
+        if rising_edge(clk) then
+            if piso_actual < target_floor then
+                up <= '1';
+                down <= '0';
+            elsif piso_actual > target_floor then
+                up <= '0';
+                down <= '1';
+            else
+                up <= '0';
+                down <= '0';
+            end if;
+        end if;
+    end process;
+
+    -- Conversión de piso actual a display (combinacional)
+    process(piso_actual)
+    begin
+        case piso_actual is
+            when 0 => piso <= "0001"; 
+            when 1 => piso <= "0010"; 
+            when 2 => piso <= "0011"; 
+            when 3 => piso <= "0100"; 
+            when 4 => piso <= "0101"; 
+            when others => piso <= "0000"; 
+        end case;
+    end process;
+    
+end arch_name;
