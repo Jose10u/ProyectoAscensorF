@@ -1,0 +1,129 @@
+library IEEE;
+use IEEE.STD_LOGIC_1164.ALL;
+use IEEE.NUMERIC_STD.ALL;
+
+entity ascensor is
+    Port (
+        clk          : in  STD_LOGIC;
+		  reset 			: in std_logic;
+        up		 		: in std_logic;
+		  down		 		: in std_logic;
+        peso     : in  STD_LOGIC;
+        fallo_electrico   : in  STD_LOGIC;
+		  
+        puerta    : out STD_LOGIC;
+        motor        : out STD_LOGIC_VECTOR(1 downto 0)
+    );
+end ascensor;
+
+architecture Behavioral of ascensor is
+
+    type state_type is (detenido, arriba, abajo, sobrecarga, fallo);
+    signal e_actual, e_siguiente : state_type;
+	 
+begin
+	 
+	--memoria del estado
+    process(clk, reset)
+		begin
+		if (reset = '1') then
+			e_actual <= detenido;
+		
+		elsif (clk'event and clk ='1') then
+			e_actual <= e_siguiente;
+		end if;
+	 end process;
+	
+	
+	--logica siguiente estado
+	process(e_actual, up, down, peso, fallo_electrico)
+		begin
+			case(e_actual) is
+			
+				when detenido =>
+					if (up = '1') then
+						e_siguiente <= arriba;
+					elsif (down = '1') then
+						e_siguiente <= abajo;
+					elsif (peso = '1') then
+						e_siguiente <= sobrecarga;
+					elsif (fallo_electrico = '1') then
+						e_siguiente <= fallo;
+					else 
+						e_siguiente <= detenido;
+					end if;
+				
+				when arriba =>
+					if (up = '0') then
+						e_siguiente <= detenido;
+					elsif (fallo_electrico = '1') then
+						e_siguiente <= fallo;
+					else	
+						e_siguiente <= arriba;
+					end if;
+				
+				when abajo => 
+					if (down = '0') then
+						e_siguiente <= detenido;
+					elsif (fallo_electrico = '1') then
+						e_siguiente <= fallo;
+					else
+						e_siguiente <= abajo;
+					end if;
+				
+				when fallo => 
+					if (fallo_electrico = '1') then
+						e_siguiente <= fallo;
+					else
+						e_siguiente <= detenido;
+					end if;
+					
+				when sobrecarga =>
+					if (peso = '1') then
+						e_siguiente <= sobrecarga;
+					else
+						e_siguiente <= detenido;
+					end if;
+					
+			end case;
+	end process;
+	
+	
+	--logica de salidas
+	process(e_actual, up, down, peso, fallo_electrico)
+		begin
+			case (e_actual) is
+				when detenido =>
+					if (up = '0' and down = '0') then
+						puerta <= '1';
+						motor <= "00";
+					end if;
+				
+				when arriba =>
+					if (up = '1') then
+						puerta <= '0';
+						motor <= "10";
+					end if;
+				
+				when abajo =>
+					if (down = '1') then
+						puerta <= '0';
+						motor <= "01";
+					end if;
+				
+				when sobrecarga =>
+					if (peso = '1') then
+						puerta <= '1';
+						motor <= "00";
+					end if;
+				
+				when fallo =>
+					if (fallo_electrico = '1') then
+						puerta <= '0';
+						motor <= "00";
+					end if;
+					
+			end case;
+	end process;
+	
+end Behavioral;
