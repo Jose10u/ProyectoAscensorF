@@ -1,0 +1,54 @@
+library IEEE;
+use ieee.std_logic_1164.all;
+
+entity recibir_llamado is
+
+	port
+	(
+		-- Input ports
+		clk : in std_logic;
+		reset : in std_logic;
+		piso_seleccionado	: in  std_logic_vector(4 downto 0);		
+		piso_seleccionado_panel : in std_logic_vector(4 downto 0);
+		
+		-- Output ports
+		direccion	: out std_logic_vector(3 downto 0);
+		piso_salida : out std_logic_vector(4 downto 0);
+		e_l : out std_logic
+	);
+end recibir_llamado;
+
+
+
+architecture arch_name of recibir_llamado is
+
+	signal conteo_posicion : integer range 0 to 15 :=0;
+	
+	begin
+	process(clk, reset)
+		begin
+			if rising_edge (clk) then
+			if reset = '1' then
+				direccion <= "0000";
+				piso_salida <= "00000";
+				e_l <= '0';
+			else
+				if piso_seleccionado = "00000" and piso_seleccionado_panel="00000" then
+					e_l <= '0';
+				elsif piso_seleccionado /= "00000" then
+					e_l <= '1';
+					conteo_posicion <= conteo_posicion + 1;
+					piso_salida <= piso_seleccionado;
+				elsif piso_seleccionado_panel /= "00000" then 
+					e_l <= '1';
+					conteo_posicion <= conteo_posicion + 1;
+					piso_salida <= piso_seleccionado_panel;
+					if conteo_posicion = 15 then
+						conteo_posicion <= 0;
+					end if;
+				end if;
+			end if;
+			end if;
+	end process;
+
+end arch_name;
